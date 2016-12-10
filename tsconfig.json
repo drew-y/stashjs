@@ -3,7 +3,8 @@
         "module": "commonjs",
         "target": "es6",
         "noImplicitAny": false,
-        "sourceMap": true,
-        "declaration": true
+        "sourceMap": false,
+        "declaration": true,
+        "outDir": "dist"
     }
 }

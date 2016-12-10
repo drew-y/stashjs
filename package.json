@@ -2,11 +2,17 @@
   "name": "cashjs",
   "version": "0.1.0",
   "description": "Lightweight cache utility with a mongo-like api",
-  "main": "cash.js",
+  "main": "dist/Cash.js",
   "author": "Andrew Youngwerth <drew.youngwerth@versabuilt.com>",
   "license": "MIT",
+  "target": "Browser",
   "dependencies": {
     "eventemitter3": "^2.0.2",
     "schemerjs": "^1.1.1"
+  },
+  "devDependencies": {
+    "ts-loader": "^1.3.1",
+    "typescript": "^2.1.4",
+    "webpack": "^1.14.0"
   }
 }
