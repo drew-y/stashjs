@@ -4,5 +4,9 @@
   "description": "Lightweight cache utility with a mongo-like api",
   "main": "cash.js",
   "author": "Andrew Youngwerth <drew.youngwerth@versabuilt.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "eventemitter3": "^2.0.2",
+    "schemerjs": "^1.1.1"
+  }
 }
