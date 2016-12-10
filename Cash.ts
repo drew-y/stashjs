@@ -51,7 +51,7 @@ export interface Result {
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Collection - Mongo like evented data Cache */
-export default class Cash extends EventEmitter {
+export class Cash extends EventEmitter {
   readonly documents: { [_id: string]: Document } = {};
   readonly cachedQueries: { [_id: string]: ((doc: Document) => boolean)[] } = {};
 
@@ -91,10 +91,10 @@ export default class Cash extends EventEmitter {
     const queryType = typeof(queryItem);
     const isPrimitive = queryType === "string" || queryType === "number" || queryType === "boolean";
     if (isPrimitive) {
-      return (doc: Document): boolean => doc[queryItemField] === queryItem;
+      return (doc: Document): boolean => getField(queryItemField, doc).value === queryItem;
     }
     if (queryItem instanceof RegExp) {
-      return (doc: Document): boolean => queryItem.test(doc[queryItemField]);
+      return (doc: Document): boolean => queryItem.test(getField(queryItemField, doc).value);
     }
 
     const opName = Object.keys(queryItem)[0];
