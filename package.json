@@ -5,8 +5,8 @@
   "main": "dist/Cash.js",
   "author": "Andrew Youngwerth <drew.youngwerth@versabuilt.com>",
   "license": "MIT",
-  "target": "Browser",
   "dependencies": {
+    "@types/node": "^0.0.2",
     "eventemitter3": "^2.0.2",
     "schemerjs": "^1.1.1"
   },
