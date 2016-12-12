@@ -142,16 +142,25 @@ export class Cash extends EventEmitter {
     });
   }
 
-  remove(query: Query, name?: string, one?: boolean) {
-    this.emit("beforeRemove", query);
+  /** Remove a document from the cache. Promise resolves with the removed document(s). */
+  remove(query: Query, name?: string, one?: boolean): Promise<Document[]> {
     const docsToRemove = this.find(query, name, one);
-    const removedDocs: Document[] = [];
-    for (const doc of docsToRemove) {
-      removedDocs.push(Object.assign({}, doc));
-      delete this.documents[doc._id];
-    }
-    this.emit("remove", removedDocs);
-    return removedDocs;
+
+    return new Promise((resolve, reject) => {
+      const hResolve = () => {
+        const removedDocs: Document[] = [];
+        for (const doc of docsToRemove) {
+          removedDocs.push(Object.assign({}, doc));
+          delete this.documents[doc._id];
+        }
+        this.emit("remove", removedDocs);
+
+        return resolve(removedDocs);
+      }
+
+      const hasHooks = this.emit("beforeRemove", docsToRemove, query, hResolve, reject);
+      if (!hasHooks) hResolve();
+    });
   }
 
   findOne(query: Query, name?: string): Document | void {
