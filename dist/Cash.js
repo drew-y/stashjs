@@ -13,14 +13,13 @@ class Cash extends eventemitter3_1.EventEmitter {
         this.cachedQueries = {};
     }
     /** Generate a unique ID */
-    genID() {
-        const randArray = new Uint32Array(8);
-        crypto.getRandomValues(randArray);
-        let id = "";
-        randArray.forEach((rand) => {
-            id += rand.toString(36);
-        });
-        return id;
+    genID(length = 18) {
+        let ID = "";
+        while (ID.length < length) {
+            const randNum = Math.floor((Math.random() * 100000000));
+            ID += randNum.toString(36);
+        }
+        return ID.substring(0, length);
     }
     insertDoc(doc) {
         const _id = this.genID();
@@ -93,16 +92,23 @@ class Cash extends eventemitter3_1.EventEmitter {
                 hResolve();
         });
     }
+    /** Remove a document from the cache. Promise resolves with the removed document(s). */
     remove(query, name, one) {
-        this.emit("beforeRemove", query);
         const docsToRemove = this.find(query, name, one);
-        const removedDocs = [];
-        for (const doc of docsToRemove) {
-            removedDocs.push(Object.assign({}, doc));
-            delete this.documents[doc._id];
-        }
-        this.emit("remove", removedDocs);
-        return removedDocs;
+        return new Promise((resolve, reject) => {
+            const hResolve = () => {
+                const removedDocs = [];
+                for (const doc of docsToRemove) {
+                    removedDocs.push(Object.assign({}, doc));
+                    delete this.documents[doc._id];
+                }
+                this.emit("remove", removedDocs);
+                return resolve(removedDocs);
+            };
+            const hasHooks = this.emit("beforeRemove", docsToRemove, query, hResolve, reject);
+            if (!hasHooks)
+                hResolve();
+        });
     }
     findOne(query, name) {
         return this.find(query, name, true)[0];
@@ -138,7 +144,6 @@ class Cash extends eventemitter3_1.EventEmitter {
         return matchingDocs;
     }
 }
-exports.Cash = Cash;
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 ///////// Operators
@@ -319,3 +324,4 @@ const logicalOperators = {
         return (doc) => !check(doc);
     }
 };
+module.exports = Cash;
