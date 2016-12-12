@@ -56,14 +56,14 @@ export class Cash extends EventEmitter {
   readonly cachedQueries: { [_id: string]: ((doc: Document) => boolean)[] } = {};
 
   /** Generate a unique ID */
-  genID(): string {
-    const randArray = new Uint32Array(8);
-    crypto.getRandomValues(randArray);
-    let id = "";
-    randArray.forEach((rand) => {
-      id += rand.toString(36);
-    });
-    return id;
+  genID(length: number = 18): string {
+    let ID = "";
+    while (ID.length < length) {
+      const randNum = Math.floor((Math.random() * 100000000));
+      ID += randNum.toString(36);
+    }
+    
+    return ID.substring(0, length);
   }
 
   private insertDoc(doc: Object): Result {
