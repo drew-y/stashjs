@@ -192,7 +192,7 @@ function genericUpdate(docsToUpdate: Document[], fields: Object, operation: oper
 
       const docField = getField(field, doc);
       if (docField.success) {
-        operation(docField, docField.field, fields[field])
+        operation(docField.reference, docField.field, fields[field])
       }
     }
   }
