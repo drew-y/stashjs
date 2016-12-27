@@ -1,5 +1,6 @@
 import { EventEmitter } from "eventemitter3";
-import { Document, Result, Query, Sort, Update} from "./cashInterfaces";
+import { Document, Result, Query, Sort, Update, compiledQuery, Collection } from "./definitions";
+import Cursor = require('./Cursor');
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -8,9 +9,9 @@ import { Document, Result, Query, Sort, Update} from "./cashInterfaces";
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Collection - Mongo like evented data Cache */
-class Cash extends EventEmitter {
+class Cash extends EventEmitter implements Collection {
   readonly documents: { [_id: string]: Document } = {};
-  readonly cachedQueries: { [_id: string]: ((doc: Document) => boolean)[] } = {};
+  private readonly cachedQueries: { [_id: string]: compiledQuery } = {};
 
   /** Generate a unique ID */
   genID(length: number = 18): string {
@@ -19,29 +20,16 @@ class Cash extends EventEmitter {
       const randNum = Math.floor((Math.random() * 100000000));
       ID += randNum.toString(36);
     }
-    
+
     return ID.substring(0, length);
   }
 
   private insertDoc(doc: Object): Result {
     const _id = this.genID();
-    const document: { _id: string } = { _id };
-    Object.assign(document, doc);
-    this.documents[_id] = document;
+    doc[_id] = _id;
+    this.documents[_id] = doc as Document;
     this.emit("insert", doc);
-    return { success: true, document };
-  }
-
-  private updateDoc(query: Query, update: Object, name?: string, one?: boolean): Result {
-    const docsToUpdate = this.find(query, name, one);
-    for (const key in update) {
-      if (updateOperators.hasOwnProperty(key)) {
-        updateOperators[key](docsToUpdate, update[key]);
-      }
-    }
-
-    this.emit("update", docsToUpdate);
-    return { success: true, documents: docsToUpdate };
+    return { success: true, document: doc as Document };
   }
 
   private parseQueryItem(queryItemField: string, queryItem: any): (doc: Document) => boolean {
@@ -88,13 +76,22 @@ class Cash extends EventEmitter {
   }
 
   update(query: Query, update: Object, name?: string, one?: boolean): Promise<Result> {
-    if (update.hasOwnProperty("_id")) {
-      delete update["_id"];
+    const docs = this.find(query, name, one);
+
+    function act() {
+      for (const key in update) {
+        if (updateOperators.hasOwnProperty(key)) {
+          updateOperators[key](docs, update[key]);
+        }
+      }
+
+      this.emit("update", docs);
+      return { success: true, documents: docs };
     }
 
     return new Promise((resolve, reject) => {
-      const hResolve = () => resolve(this.updateDoc(query, update, name, one));
-      const hasHooks = this.emit("beforeUpdate", update, query, hResolve, reject);
+      const hResolve = () => resolve(act);
+      const hasHooks = this.emit("beforeUpdate", docs, hResolve, reject);
       if (!hasHooks) hResolve();
     });
   }
@@ -115,7 +112,7 @@ class Cash extends EventEmitter {
         return resolve(removedDocs);
       }
 
-      const hasHooks = this.emit("beforeRemove", docsToRemove, query, hResolve, reject);
+      const hasHooks = this.emit("beforeRemove", docsToRemove, hResolve, reject);
       if (!hasHooks) hResolve();
     });
   }
@@ -158,7 +155,6 @@ class Cash extends EventEmitter {
 }
 
 export = Cash;
-
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////

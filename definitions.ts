@@ -1,10 +1,19 @@
 import { Result as SchemaResult } from "schemerjs";
+import { EventEmitter } from "eventemitter3";
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 ///////// Interfaces and types
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+
+export interface Collection extends EventEmitter {
+  insert(doc: Object): Promise<Result>;
+  update(query: Query, update: Object, name?: string, one?: boolean): Promise<Result>;
+  remove(query: Query, name?: string, one?: boolean): Promise<Document[]>;
+  findOne(query: Query, name?: string): Document | void;
+  find(query: Query, name?: string, one?: boolean): Document[];
+}
 
 export interface Query {
   _id?: string;
@@ -42,3 +51,5 @@ export interface Result {
   document?: Document;
   documents?: Document[];
 }
+
+export type compiledQuery = ((doc: Document) => boolean)[];
