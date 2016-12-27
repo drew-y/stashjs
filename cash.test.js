@@ -30,8 +30,8 @@ function insertDocs(amount) {
     products.insert({ name: generateName(), price: generatePrice(), qty: generateQty(), priceSchedule: {
       monday: generatePrice(),
       tuesday: generatePrice(),
-      friday: generatePrice()    
-    }})
+      friday: generatePrice()
+    }});
   }
 }
 
