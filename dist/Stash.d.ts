@@ -2,7 +2,7 @@ import { EventEmitter } from "eventemitter3";
 import { Document, Result, Query, Collection, documents } from "./definitions";
 import Cursor = require('./Cursor');
 /** Collection - Mongo like evented data Cache */
-declare class Cash extends EventEmitter implements Collection {
+declare class Stash extends EventEmitter implements Collection {
     readonly documents: documents;
     /** Generate a unique ID */
     genID(length?: number): string;
@@ -14,4 +14,4 @@ declare class Cash extends EventEmitter implements Collection {
     find(query: Query): Cursor;
     private findDocs(query);
 }
-export = Cash;
+export = Stash;

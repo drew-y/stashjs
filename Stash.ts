@@ -11,7 +11,7 @@ import clone = require('./clone');
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Collection - Mongo like evented data Cache */
-class Cash extends EventEmitter implements Collection {
+class Stash extends EventEmitter implements Collection {
   readonly documents: documents = {};
 
   /** Generate a unique ID */
@@ -116,7 +116,7 @@ class Cash extends EventEmitter implements Collection {
   }
 }
 
-export = Cash;
+export = Stash;
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////

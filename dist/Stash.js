@@ -9,7 +9,7 @@ const clone = require('./clone');
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 /** Collection - Mongo like evented data Cache */
-class Cash extends eventemitter3_1.EventEmitter {
+class Stash extends eventemitter3_1.EventEmitter {
     constructor() {
         super(...arguments);
         this.documents = {};
@@ -131,5 +131,5 @@ const updateOperators = {
         genericUpdate(docsToUpdate, fields, mul);
     }
 };
-module.exports = Cash;
-//# sourceMappingURL=Cash.js.map
+module.exports = Stash;
+//# sourceMappingURL=Stash.js.map

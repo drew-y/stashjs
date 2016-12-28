@@ -1,7 +1,7 @@
 /* global test, expect */
-const Cash = require('./dist/Cash');
+const Stash = require('./dist/Cash');
 
-const products = new Cash();
+const products = new Stash();
 
 products.insert({ name: "avacado", price: 3, qty: 43, priceSchedule: {
   monday: 1,
