@@ -1,5 +1,6 @@
 import { Result as SchemaResult } from "schemerjs";
 import { EventEmitter } from "eventemitter3";
+import Cursor = require('./Cursor');
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -9,10 +10,10 @@ import { EventEmitter } from "eventemitter3";
 
 export interface Collection extends EventEmitter {
   insert(doc: Object): Promise<Result>;
-  update(query: Query, update: Object, name?: string, one?: boolean): Promise<Result>;
-  remove(query: Query, name?: string, one?: boolean): Promise<Document[]>;
-  findOne(query: Query, name?: string): Document | void;
-  find(query: Query, name?: string, one?: boolean): Document[];
+  update(query: Query, update: Object): Promise<Result>;
+  remove(query: Query): Promise<Document[]>;
+  findOne(query: Query): Document | void;
+  find(query: Query): Cursor;
 }
 
 export interface Query {
@@ -52,4 +53,4 @@ export interface Result {
   documents?: Document[];
 }
 
-export type compiledQuery = ((doc: Document) => boolean)[];
+export type documents = { [_id: string]: Document }

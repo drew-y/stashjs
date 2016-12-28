@@ -1,6 +1,8 @@
 import { EventEmitter } from "eventemitter3";
-import { Document, Result, Query, Sort, Update, compiledQuery, Collection } from "./definitions";
+import { Document, Result, Query, Sort, Update, Collection, documents } from "./definitions";
+import { getField, testDocAgainstQuery } from "./query";
 import Cursor = require('./Cursor');
+import clone = require('./clone');
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -10,8 +12,7 @@ import Cursor = require('./Cursor');
 
 /** Collection - Mongo like evented data Cache */
 class Cash extends EventEmitter implements Collection {
-  readonly documents: { [_id: string]: Document } = {};
-  private readonly cachedQueries: { [_id: string]: compiledQuery } = {};
+  readonly documents: documents = {};
 
   /** Generate a unique ID */
   genID(length: number = 18): string {
@@ -24,59 +25,26 @@ class Cash extends EventEmitter implements Collection {
     return ID.substring(0, length);
   }
 
-  private insertDoc(doc: Object): Result {
-    const _id = this.genID();
-    doc[_id] = _id;
-    this.documents[_id] = doc as Document;
-    this.emit("insert", doc);
-    return { success: true, document: doc as Document };
-  }
-
-  private parseQueryItem(queryItemField: string, queryItem: any): (doc: Document) => boolean {
-    const queryType = typeof(queryItem);
-    const isPrimitive = queryType === "string" || queryType === "number" || queryType === "boolean";
-    if (isPrimitive) {
-      return (doc: Document): boolean => getField(queryItemField, doc).value === queryItem;
-    }
-    if (queryItem instanceof RegExp) {
-      return (doc: Document): boolean => queryItem.test(getField(queryItemField, doc).value);
-    }
-
-    const opName = Object.keys(queryItem)[0];
-    let opFunc: (queryItemField: string, queryItem: Object) => (doc: Document) => boolean;
-    if (comparisonOperators.hasOwnProperty(opName)) {
-      opFunc = comparisonOperators[opName];
-    } else if (logicalOperators.hasOwnProperty(opName)) {
-      opFunc = logicalOperators[opName];
-    } else {
-      throw new Error(`Invalid operator for ${queryItemField}`);
-    }
-    return opFunc(queryItemField, queryItem[opName]);
-  }
-
-  /** Reutrns an array of functions that check a doc and return true if the doc matches the function */
-  private parseQuery(query: Query): ((doc: Document) => boolean)[] {
-    const checks: ((doc: Document) => boolean)[] = [];
-    for (const key in query) {
-      if (query.hasOwnProperty(key)) {
-        const queryItem = query[key];
-        const check = this.parseQueryItem(key, queryItem);
-        checks.push(check);
-      }
-    }
-    return checks;
-  }
-
   insert(doc: Object): Promise<Result> {
+    function doInsert() {
+      const _id = this.genID();
+      doc = clone(doc) // Clone the doc
+      doc["_id"] = _id;
+      this.documents[_id] = doc as Document;
+      this.emit("insert", doc);
+      return { success: true, document: doc as Document };
+    }
+
     return new Promise((resolve, reject) => {
-      const hResolve = () => resolve(this.insertDoc(doc));
+      const hResolve = () => resolve(doInsert());
       const hasHooks = this.emit("beforeInsert", doc, hResolve, reject);
       if (!hasHooks) hResolve();
     });
   }
 
-  update(query: Query, update: Object, name?: string, one?: boolean): Promise<Result> {
-    const docs = this.find(query, name, one);
+  update(query: Query, update: Object): Promise<Result> {
+    const docs = this.findDocs(query);
+    const oldDocs = docs.map((doc) => clone(doc));
 
     function act() {
       for (const key in update) {
@@ -85,26 +53,26 @@ class Cash extends EventEmitter implements Collection {
         }
       }
 
-      this.emit("update", docs);
+      this.emit("update", docs, oldDocs);
       return { success: true, documents: docs };
     }
 
     return new Promise((resolve, reject) => {
       const hResolve = () => resolve(act);
-      const hasHooks = this.emit("beforeUpdate", docs, hResolve, reject);
+      const hasHooks = this.emit("beforeUpdate", oldDocs, hResolve, reject);
       if (!hasHooks) hResolve();
     });
   }
 
   /** Remove a document from the cache. Promise resolves with the removed document(s). */
-  remove(query: Query, name?: string, one?: boolean): Promise<Document[]> {
-    const docsToRemove = this.find(query, name, one);
+  remove(query: Query): Promise<Document[]> {
+    const docsToRemove = this.findDocs(query);
 
     return new Promise((resolve, reject) => {
       const hResolve = () => {
         const removedDocs: Document[] = [];
         for (const doc of docsToRemove) {
-          removedDocs.push(Object.assign({}, doc));
+          removedDocs.push(doc);
           delete this.documents[doc._id];
         }
         this.emit("remove", removedDocs);
@@ -117,11 +85,16 @@ class Cash extends EventEmitter implements Collection {
     });
   }
 
-  findOne(query: Query, name?: string): Document | void {
-    return this.find(query, name, true)[0];
+  findOne(query: Query): Document | undefined {
+    const doc = this.findDocs(query)[0];
+    return doc ? clone(doc) : undefined;
   }
 
-  find(query: Query, name?: string, one?: boolean): Document[] {
+  find(query: Query): Cursor {
+    return new Cursor(this.findDocs(query), query, this);
+  }
+
+  private findDocs(query: Query): Document[] {
     const matchingDocs: Document[] = [];
 
     let docs = this.documents;
@@ -129,27 +102,16 @@ class Cash extends EventEmitter implements Collection {
     // If query has an _id find the doc it correponds too (if it exists)
     if (query.hasOwnProperty("_id")) {
       if (!docs.hasOwnProperty(query._id)) return [];
-      docs = {};
-      docs[query._id] = Object.assign({}, this.documents[query._id]);
-    }
 
-    const queryIsCached = !!this.cachedQueries[name];
-    const checks = queryIsCached ? this.cachedQueries[name] : this.parseQuery(query);
-    if (name && !queryIsCached) {
-      this.cachedQueries[name] = checks;
+      docs = {};
+      docs[query._id] = this.documents[query._id];
     }
 
     for (const docID in docs) {
-      if (docs.hasOwnProperty(docID)) {
-        const document = docs[docID];
-        let isValid = true;
-        for (const check of checks) {
-          isValid = check(document);
-        }
-        if (isValid) matchingDocs.push(document);
-        if (isValid && one) break;
-      }
+      const document = docs[docID];
+      if (testDocAgainstQuery(query, document)) matchingDocs.push(document);
     }
+
     return matchingDocs;
   }
 }
@@ -161,23 +123,6 @@ export = Cash;
 ///////// Operators
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-
-/** Parse a mongo field string ("field.subdoc.val etc") and return the containing subdocument, and the value of the subdoc */
-function getField(fieldStr: string, doc: Document): { success: boolean, reference?: Object, field?: string, value?: any } {
-  const parsedFields = fieldStr.split(".");
-  const lastField = parsedFields.pop();
-
-  let docLevel = doc;
-  for (const fieldLevel of parsedFields) {
-    try {
-      docLevel = docLevel[fieldLevel];
-    } catch (error) {
-      return { success: false };
-    }
-  }
-
-  return { success: true, reference: docLevel, field: lastField, value: docLevel[lastField] };
-}
 
 type operator = (object: Object, field: string, value) => void;
 
@@ -210,128 +155,5 @@ const updateOperators = {
   $mul: function(docsToUpdate: Document[], fields: Object) {
     const mul = (obj, field, value) => { obj[field] *= value };
     genericUpdate(docsToUpdate, fields, mul);
-  }
-};
-
-const comparisonOperators = {
-  $gte: function(fieldStr: string, queryItemValue: any): (doc: Document) => boolean {
-    return (doc: Document) => {
-      const fieldInfo = getField(fieldStr, doc);
-      if (fieldInfo.success) return fieldInfo.value >= queryItemValue;
-      return false;
-    };
-  },
-  $lte: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean {
-    return (doc: Document) => {
-      const fieldInfo = getField(queryItemField, doc);
-      if (fieldInfo.success) return fieldInfo.value <= queryItemValue;
-      return false;
-    };
-  },
-  $gt: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean {
-    return (doc: Document) => {
-      const fieldInfo = getField(queryItemField, doc);
-      if (fieldInfo.success) return fieldInfo.value > queryItemValue;
-      return false;
-    };
-  },
-  $lt: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean {
-    return (doc: Document) => {
-      const fieldInfo = getField(queryItemField, doc);
-      if (fieldInfo.success) return fieldInfo.value < queryItemValue;
-      return false;
-    };
-  },
-  $eq: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean {
-    return (doc: Document) => {
-      const fieldInfo = getField(queryItemField, doc);
-      if (fieldInfo.success) return fieldInfo.value === queryItemValue;
-      return false;
-    };
-  },
-  $ne: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean {
-    return (doc: Document) => {
-      const fieldInfo = getField(queryItemField, doc);
-      if (fieldInfo.success) return fieldInfo.value !== queryItemValue;
-      return false;
-    };
-  },
-  $in: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean  {
-    return (doc: Document) => {
-      const fieldInfo = getField(queryItemField, doc);
-      if (fieldInfo.success) return queryItemValue.indexOf(fieldInfo.value) !== -1;
-      return false;
-    };
-  },
-  $nin: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean  {
-    return (doc: Document) => {
-      const fieldInfo = getField(queryItemField, doc);
-      if (fieldInfo.success) return queryItemValue.indexOf(fieldInfo.value) === -1;
-      return false;
-    };
-  }
-};
-
-function getChecksFromArray(queryItemField: string, queryItemValue: any): ((doc: Document) => boolean)[] {
-    if (queryItemValue !== Array) {
-      throw new Error(`QueryItem ${queryItemField} is missing an Array`);
-    }
-
-    const checks: ((doc: Document) => boolean)[] = [];
-    queryItemValue.forEach((item) => {
-      const funcName = Object.keys(item)[0];
-
-      let func;
-      if (comparisonOperators.hasOwnProperty(funcName)) {
-        func = comparisonOperators[funcName];
-      } else if (logicalOperators.hasOwnProperty(funcName)) {
-        func = logicalOperators[funcName];
-      } else {
-        throw new Error(`Invaid operator in ${queryItemField}`);
-      }
-
-      checks.push(func(queryItemField, item[funcName]));
-    });
-
-    return checks;
-}
-
-const logicalOperators = {
-  $and: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean {
-    const checks = getChecksFromArray(queryItemField, queryItemValue);
-    return (doc: Document): boolean => {
-      for (const check of checks) {
-        const success = check(doc);
-        if (!success) return false;
-      }
-      return true;
-    };
-  },
-  $or: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean {
-    const checks = getChecksFromArray(queryItemField, queryItemValue);
-    return (doc: Document): boolean => {
-      for (const check of checks) {
-        const success = check(doc);
-        if (success) return true;
-      }
-      return false;
-    };
-  },
-  $nor: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean {
-    const checks = getChecksFromArray(queryItemField, queryItemValue);
-    return (doc: Document): boolean => {
-      for (const check of checks) {
-        const success = check(doc);
-        if (success) return false;
-      }
-      return true;
-    };
-  },
-  $not: function(queryItemField: string, queryItemValue: any): (doc: Document) => boolean {
-    const opName = Object.keys(queryItemValue)[0];
-    const checkOP = comparisonOperators[opName];
-    if (!checkOP) throw new Error(`Bad operator for $not at`);
-    const check = checkOP(queryItemField, queryItemValue);
-    return (doc: Document) => !check(doc);
   }
 };
