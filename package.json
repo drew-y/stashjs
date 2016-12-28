@@ -6,7 +6,7 @@
   "author": "Andrew Youngwerth <drew.youngwerth@versabuilt.com>",
   "license": "MIT",
   "dependencies": {
-    "eventemitter3": "^2.0.2",
+    "eventemitter3": "^2.0.2"
   },
   "scripts": {
     "test": "jest"
