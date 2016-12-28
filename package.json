@@ -1,19 +1,18 @@
 {
   "name": "stashjs",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Lightweight data store utility with a mongo-like api",
   "main": "dist/Cash.js",
   "author": "Andrew Youngwerth <drew.youngwerth@versabuilt.com>",
   "license": "MIT",
   "dependencies": {
-    "@types/node": "^0.0.2",
     "eventemitter3": "^2.0.2",
-    "schemerjs": "^1.1.1"
   },
   "scripts": {
     "test": "jest"
   },
   "devDependencies": {
+    "@types/node": "^0.0.2",
     "eslint": "^3.12.0",
     "jest": "^17.0.3",
     "ts-loader": "^1.3.1",
