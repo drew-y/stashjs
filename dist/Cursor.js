@@ -55,3 +55,4 @@ class Cursor extends eventemitter3_1.EventEmitter {
     }
 }
 module.exports = Cursor;
+//# sourceMappingURL=Cursor.js.map

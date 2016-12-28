@@ -24,14 +24,14 @@ class Cash extends eventemitter3_1.EventEmitter {
         return ID.substring(0, length);
     }
     insert(doc) {
-        function doInsert() {
+        const doInsert = () => {
             const _id = this.genID();
             doc = clone(doc); // Clone the doc
             doc["_id"] = _id;
             this.documents[_id] = doc;
             this.emit("insert", doc);
             return { success: true, document: doc };
-        }
+        };
         return new Promise((resolve, reject) => {
             const hResolve = () => resolve(doInsert());
             const hasHooks = this.emit("beforeInsert", doc, hResolve, reject);
@@ -42,7 +42,7 @@ class Cash extends eventemitter3_1.EventEmitter {
     update(query, update) {
         const docs = this.findDocs(query);
         const oldDocs = docs.map((doc) => clone(doc));
-        function act() {
+        const act = () => {
             for (const key in update) {
                 if (updateOperators.hasOwnProperty(key)) {
                     updateOperators[key](docs, update[key]);
@@ -50,9 +50,9 @@ class Cash extends eventemitter3_1.EventEmitter {
             }
             this.emit("update", docs, oldDocs);
             return { success: true, documents: docs };
-        }
+        };
         return new Promise((resolve, reject) => {
-            const hResolve = () => resolve(act);
+            const hResolve = () => { resolve(act()); };
             const hasHooks = this.emit("beforeUpdate", oldDocs, hResolve, reject);
             if (!hasHooks)
                 hResolve();
@@ -132,3 +132,4 @@ const updateOperators = {
     }
 };
 module.exports = Cash;
+//# sourceMappingURL=Cash.js.map

@@ -26,7 +26,7 @@ class Cash extends EventEmitter implements Collection {
   }
 
   insert(doc: Object): Promise<Result> {
-    function doInsert() {
+    const doInsert = () => {
       const _id = this.genID();
       doc = clone(doc) // Clone the doc
       doc["_id"] = _id;
@@ -46,7 +46,7 @@ class Cash extends EventEmitter implements Collection {
     const docs = this.findDocs(query);
     const oldDocs = docs.map((doc) => clone(doc));
 
-    function act() {
+    const act = () => {
       for (const key in update) {
         if (updateOperators.hasOwnProperty(key)) {
           updateOperators[key](docs, update[key]);
@@ -58,7 +58,7 @@ class Cash extends EventEmitter implements Collection {
     }
 
     return new Promise((resolve, reject) => {
-      const hResolve = () => resolve(act);
+      const hResolve = () => { resolve(act()) };
       const hasHooks = this.emit("beforeUpdate", oldDocs, hResolve, reject);
       if (!hasHooks) hResolve();
     });

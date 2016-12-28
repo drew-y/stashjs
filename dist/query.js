@@ -96,3 +96,4 @@ const logicalOperators = {
         return !testDocAgainstQuery(opVal[Object.keys(opVal)[0]], document);
     }
 };
+//# sourceMappingURL=query.js.map

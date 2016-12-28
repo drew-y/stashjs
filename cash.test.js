@@ -1,3 +1,4 @@
+/* global test, expect */
 const Cash = require('./dist/Cash');
 
 const products = new Cash();
@@ -58,12 +59,12 @@ test('Can find a the correct document with a string field', () => {
 
 test('Finds multiple docs with matching field values', () => {
     const docs = products.find({ price: 1 });
-    expect(docs.length).toBe(2);
+    expect(docs.count).toBe(2);
 });
 
 test('Can find all docs with a value in a subdocument', () => {
     const docs = products.find({ "priceSchedule.friday": 1 });
-    expect(docs.length).toBe(2);
+    expect(docs.count).toBe(2);
 });
 
 test('Can update a value', () => {
@@ -71,5 +72,5 @@ test('Can update a value', () => {
         .then(() => {
             const pear = products.findOne({ name: "pear" });
             expect(pear.qty).toBe(7);
-        })
-})
+        });
+});
