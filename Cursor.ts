@@ -49,8 +49,8 @@ class Cursor extends EventEmitter {
 
   destroy() {
     this.collection.removeListener("insert", this.onInsert, this);
-    this.collection.removeListener("insert", this.onUpdate, this);
-    this.collection.removeListener("insert", this.onRemove, this);
+    this.collection.removeListener("update", this.onUpdate, this);
+    this.collection.removeListener("remove", this.onRemove, this);
     this.removeAllListeners();
     this.collection = undefined;
     this.documents = undefined;
