@@ -1,6 +1,6 @@
 {
   "name": "stashjs",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Lightweight data store utility with a mongo-like api",
   "main": "dist/Cash.js",
   "author": "Andrew Youngwerth <drew.youngwerth@versabuilt.com>",
