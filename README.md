@@ -17,4 +17,4 @@ users.insert({ firstname: "John", lastname: "Smith" });
 users.findOne({ firstname: "John" }) // ({ firstname: "John", lastname: "Smith" }
 ```
 
-## Documentation TODO ¯\_(ツ)_/¯
+## Documentation TODO ¯\\_(ツ)_/¯
